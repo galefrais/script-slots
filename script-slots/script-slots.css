@@ -1,8 +1,0 @@
-/* Minimal styling for Script Slots config app */
-.script-slots .script-list { margin: 0; padding: 0; list-style: none; }
-.script-slots .script-list li { display:flex; gap: 0.5rem; align-items:center; padding: 0.35rem 0; border-bottom: 1px solid var(--color-border-light-2); }
-.script-slots .script-list .name { flex: 1; font-weight: 600; }
-.script-slots .muted { opacity: 0.8; font-size: 0.9em; }
-.script-slots .row { display:flex; gap: 0.75rem; align-items:center; }
-.script-slots .row > * { flex: 1; }
-.script-slots textarea { font-family: var(--font-mono); min-height: 420px; }
