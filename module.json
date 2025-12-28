@@ -1,0 +1,10 @@
+{
+  "id": "script-slots",
+  "title": "Script Slots",
+  "description": "GM-only editable named script slots stored in world settings, runnable by players via game.scriptSlots.run(name, args).",
+  "version": "0.2.0",
+  "authors": [{ "name": "Galefrais" }],
+  "compatibility": { "minimum": "13", "verified": "13" },
+  "esmodules": ["script-slots.js"],
+  "styles": ["script-slots.css"]
+}
