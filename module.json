@@ -2,10 +2,10 @@
   "id": "script-slots",
   "title": "Script Slots",
   "description": "GM-only editable named script slots stored in world settings, runnable by players via a secure socket request: game.scriptSlots.run(name, args).",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "authors": [
     {
-      "name": "Script Slots"
+      "name": "Galefrais"
     }
   ],
   "compatibility": {
@@ -19,5 +19,5 @@
     "script-slots.css"
   ],
   "manifest": "https://raw.githubusercontent.com/Galefrais/script-slots/main/module.json",
-  "download": "https://github.com/Galefrais/script-slots/releases/download/v0.1.1/script-slots.zip"
+  "download": "https://github.com/Galefrais/script-slots/releases/download/v0.1.1/script-slots-main.zip"
 }
