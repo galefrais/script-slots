@@ -12,7 +12,7 @@
 const MODULE_ID = "script-slots";
 const SOCKET = `module.${MODULE_ID}`;
 
-const SETTING_SCRIPTS = "scripts";          // world-level object map
+const SETTING_SCRIPTS = "scripts";                 // world-level object map
 const SETTING_REQUIRE_OWNER = "requireActorOwner";
 const SETTING_REQUIRE_TOKEN = "requireControlledToken"; // optional strictness
 
@@ -20,7 +20,7 @@ const SETTING_REQUIRE_TOKEN = "requireControlledToken"; // optional strictness
 // Utilities
 // -----------------------------
 function notify(type, msg) {
-  try { ui.notifications[type](msg); } catch (_) {}
+  try { ui.notifications?.[type]?.(msg); } catch (_) {}
 }
 
 function isNonEmptyString(x) {
@@ -65,6 +65,17 @@ async function postChat({ speaker, content, whisper = null }) {
   return ChatMessage.create(data);
 }
 
+function findTokenForActorOnCurrentScene(actorId) {
+  // Prefer current scene tokens (most accurate)
+  const tok = canvas.tokens.placeables?.find(t => t.actor?.id === actorId) ?? null;
+  if (tok) return tok;
+
+  // Fallback: any token doc that matches actor on current scene
+  const scene = game.scenes?.active;
+  const doc = scene?.tokens?.find(td => td.actorId === actorId) ?? null;
+  return doc ? doc.object ?? null : null;
+}
+
 // -----------------------------
 // Script compilation/execution
 // -----------------------------
@@ -107,9 +118,12 @@ async function executeEntryAsGM({ name, entry, args, userId }) {
     if (!owns) return notify("warn", `Script Slots: ${requester.name} lacks OWNER on ${actor.name}.`);
   }
 
+  // Token gate (optional)
   const requireToken = game.settings.get(MODULE_ID, SETTING_REQUIRE_TOKEN);
-  let token = canvas.tokens.placeables?.find(t => t.actor?.id === actor.id) ?? null;
-  if (requireToken && !token) return notify("warn", `Script Slots: token required but none found for ${actor.name}.`);
+  const token = findTokenForActorOnCurrentScene(actor.id);
+  if (requireToken && !token) {
+    return notify("warn", `Script Slots: token required but none found for ${actor.name} on this scene.`);
+  }
 
   const ctx = {
     moduleId: MODULE_ID,
@@ -119,7 +133,8 @@ async function executeEntryAsGM({ name, entry, args, userId }) {
     token,
     args: safeArgs,
     speaker: getSpeakerFor(actor, token),
-    chat: async (content, { whisper = null } = {}) => postChat({ speaker: getSpeakerFor(actor, token), content, whisper }),
+    chat: async (content, { whisper = null } = {}) =>
+      postChat({ speaker: getSpeakerFor(actor, token), content, whisper }),
     notify: (msg, type = "info") => notify(type, msg),
   };
 
@@ -201,7 +216,7 @@ class ScriptSlotsConfig extends Application {
       playersCanRun: !!s.playersCanRun,
       updatedAt: s.updatedAt ?? null,
       note: s.note ?? ""
-    })).sort((a,b)=>a.name.localeCompare(b.name));
+    })).sort((a, b) => a.name.localeCompare(b.name));
     return { list };
   }
 
@@ -210,16 +225,32 @@ class ScriptSlotsConfig extends Application {
       <li>
         <span class="name">${foundry.utils.escapeHTML(s.name)}</span>
         <span class="muted">${s.note ? foundry.utils.escapeHTML(s.note) : ""}</span>
+
         <label class="row" style="justify-content:flex-end; gap:0.35rem;">
           <span class="muted">On</span>
-          <input type="checkbox" data-action="toggle" data-field="enabled" data-name="${foundry.utils.escapeHTML(s.name)}" ${s.enabled ? "checked" : ""}/>
+          <input type="checkbox"
+                 data-action="toggle"
+                 data-field="enabled"
+                 data-name="${foundry.utils.escapeHTML(s.name)}"
+                 ${s.enabled ? "checked" : ""}/>
         </label>
+
         <label class="row" style="justify-content:flex-end; gap:0.35rem;">
           <span class="muted">Players</span>
-          <input type="checkbox" data-action="toggle" data-field="playersCanRun" data-name="${foundry.utils.escapeHTML(s.name)}" ${s.playersCanRun ? "checked" : ""}/>
+          <input type="checkbox"
+                 data-action="toggle"
+                 data-field="playersCanRun"
+                 data-name="${foundry.utils.escapeHTML(s.name)}"
+                 ${s.playersCanRun ? "checked" : ""}/>
         </label>
-        <button type="button" data-action="edit" data-name="${foundry.utils.escapeHTML(s.name)}"><i class="fas fa-pen"></i> Edit</button>
-        <button type="button" data-action="delete" data-name="${foundry.utils.escapeHTML(s.name)}"><i class="fas fa-trash"></i></button>
+
+        <button type="button" data-action="edit" data-name="${foundry.utils.escapeHTML(s.name)}">
+          <i class="fas fa-pen"></i> Edit
+        </button>
+
+        <button type="button" data-action="delete" data-name="${foundry.utils.escapeHTML(s.name)}">
+          <i class="fas fa-trash"></i>
+        </button>
       </li>
     `).join("");
 
@@ -237,7 +268,7 @@ class ScriptSlotsConfig extends Application {
     `;
   }
 
-  async render(force=false, options={}) {
+  async render(force = false, options = {}) {
     if (!game.user.isGM) {
       notify("warn", "Script Slots: only GMs can edit slots.");
       return this;
@@ -245,28 +276,38 @@ class ScriptSlotsConfig extends Application {
     return super.render(force, options);
   }
 
+  // ✅ FIXED: v13-safe listeners + delegated handlers for row buttons
   activateListeners(html) {
-    super.activateListeners(html);
+    super.activateListeners?.(html);
 
-    html.find("[data-action='add']").on("click", () => this._onAdd());
-    html.find("[data-action='edit']").on("click", (ev) => this._onEdit(ev));
-    html.find("[data-action='delete']").on("click", (ev) => this._onDelete(ev));
-    html.find("[data-action='toggle']").on("change", (ev) => this._onToggle(ev));
-    html.find("[data-action='export']").on("click", () => this._onExport());
-    html.find("[data-action='import']").on("click", () => this._onImport());
-  }
+    // Foundry v13: html may be HTMLElement, not jQuery
+    const root = html instanceof HTMLElement ? html : (html?.[0] ?? html);
+    if (!root) return;
 
-  async getContent() {
-    const data = await this.getData();
-    return this._renderInner(data);
-  }
+    // Delegated click handler for ALL buttons/row actions
+    root.addEventListener("click", (ev) => {
+      const el = ev.target.closest("[data-action]");
+      if (!el) return;
 
-  async _render(...args) {
-    const html = await this.getContent();
-    this.options.template = null;
-    return super._render(...args).then(() => {
-      this.element.find(".window-content").html(html);
-      this.activateListeners(this.element);
+      const action = el.dataset.action;
+      if (!action) return;
+
+      ev.preventDefault();
+
+      if (action === "add") return this._onAdd();
+      if (action === "export") return this._onExport();
+      if (action === "import") return this._onImport();
+      if (action === "edit") return this._onEdit(ev);
+      if (action === "delete") return this._onDelete(ev);
+
+      if (action === "toggle") return this._onToggle(ev);
+    });
+
+    // Make checkbox toggles reliable
+    root.addEventListener("change", (ev) => {
+      const el = ev.target.closest("[data-action='toggle']");
+      if (!el) return;
+      this._onToggle(ev);
     });
   }
 
@@ -305,7 +346,12 @@ class ScriptSlotsConfig extends Application {
               playersCanRun: !!dlg.find("#ss-players").prop("checked"),
               note: "",
               updatedAt: Date.now(),
-              code: "async function run(ctx) {\n  // ctx.actor, ctx.args, ctx.user, ctx.token\n  await ctx.chat(`<p>${ctx.actor.name} ran ${ctx.slotName}</p>`);\n}\n"
+              code:
+`async function run(ctx) {
+  // ctx.actor, ctx.args, ctx.user, ctx.token
+  await ctx.chat(\`<p>\${ctx.actor.name} ran \${ctx.slotName}</p>\`);
+}
+`
             };
 
             await setScripts(scripts);
@@ -364,7 +410,12 @@ class ScriptSlotsConfig extends Application {
             };
             const actor = canvas.tokens.controlled?.[0]?.actor ?? game.user.character ?? null;
             if (!actor) return notify("error", "Select a token for the test.");
-            await executeEntryAsGM({ name, entry: tempEntry, args: { actorId: actor.id, __test: true }, userId: game.user.id });
+            await executeEntryAsGM({
+              name,
+              entry: tempEntry,
+              args: { actorId: actor.id, __test: true },
+              userId: game.user.id
+            });
           }
         },
         close: { label: "Close" }
@@ -397,12 +448,18 @@ class ScriptSlotsConfig extends Application {
   }
 
   async _onToggle(ev) {
-    const name = normalizeName(ev.currentTarget.dataset.name);
-    const field = ev.currentTarget.dataset.field;
+    // checkbox is the element with data-*, not the label
+    const el = ev.currentTarget?.closest?.("[data-action='toggle']") ?? ev.currentTarget;
+    const name = normalizeName(el?.dataset?.name);
+    const field = el?.dataset?.field;
+
+    if (!isNonEmptyString(name) || !isNonEmptyString(field)) return;
+
     const scripts = getScripts();
     const entry = scripts[name];
     if (!entry) return;
-    entry[field] = !!ev.currentTarget.checked;
+
+    entry[field] = !!el.checked;
     entry.updatedAt = Date.now();
     scripts[name] = entry;
     await setScripts(scripts);
