@@ -1,0 +1,13 @@
+.script-slots { display:flex; flex-direction:column; gap:10px; }
+.ss-header { display:flex; gap:8px; align-items:center; }
+.ss-btn { padding:6px 10px; }
+.ss-spacer { flex:1; }
+.ss-grid { display:grid; grid-template-columns: 240px 1fr; gap:12px; min-height: 420px; }
+.ss-left { display:flex; flex-direction:column; gap:10px; }
+.ss-field label { display:block; font-weight:600; margin-bottom:4px; }
+.ss-input, .ss-select, .ss-textarea { width:100%; }
+.ss-check { display:flex; gap:8px; align-items:center; }
+.ss-actions { display:flex; gap:8px; margin-top:auto; }
+.ss-right { display:flex; flex-direction:column; gap:6px; }
+.ss-textarea { height: 100%; min-height: 360px; font-family: monospace; font-size: 12px; }
+.ss-tip { opacity:0.8; font-size: 12px; }
