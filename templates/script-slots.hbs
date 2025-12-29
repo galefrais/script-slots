@@ -1,0 +1,48 @@
+<form class="script-slots">
+  <header class="ss-header">
+    <button type="button" class="ss-btn" data-action="add">+ Add</button>
+    <button type="button" class="ss-btn" data-action="delete" {{#unless current}}disabled{{/unless}}>Delete</button>
+    <div class="ss-spacer"></div>
+    <button type="button" class="ss-btn" data-action="export">Export</button>
+    <button type="button" class="ss-btn" data-action="import">Import</button>
+  </header>
+
+  <section class="ss-body">
+    <div class="ss-left">
+      <label class="ss-label">Slot</label>
+      <select name="slot" class="ss-select" data-action="select">
+        <option value="">(select)</option>
+        {{#each slots as |s|}}
+          <option value="{{s.name}}" {{#if (eq s.name ../selectedName)}}selected{{/if}}>{{s.name}}</option>
+        {{/each}}
+      </select>
+
+      <label class="ss-label">Name</label>
+      <input name="name" type="text" class="ss-input" value="{{current.name}}" placeholder="Slot name" {{#unless current}}disabled{{/unless}} />
+
+      <label class="ss-check"><input name="enabled" type="checkbox" {{#if current.enabled}}checked{{/if}} {{#unless current}}disabled{{/unless}} /> Enabled</label>
+
+      <hr class="ss-hr" />
+      <label class="ss-check"><input name="requireOwner" type="checkbox" {{#if current.requireOwner}}checked{{/if}} {{#unless current}}disabled{{/unless}} /> Require Actor Owner</label>
+      <label class="ss-check"><input name="requireToken" type="checkbox" {{#if current.requireToken}}checked{{/if}} {{#unless current}}disabled{{/unless}} /> Require Token on Scene</label>
+
+      <div class="ss-actions">
+        <button type="button" class="ss-btn primary" data-action="save" {{#unless current}}disabled{{/unless}}>Save</button>
+        <button type="button" class="ss-btn" data-action="run" {{#unless current}}disabled{{/unless}}>Run (as GM)</button>
+      </div>
+
+      <p class="ss-tip">
+        Tip: from a macro you can run this slot with<br/>
+        <code>game.scriptsSlots.run('Slot Name', { actorId: actor.id })</code>
+      </p>
+    </div>
+
+    <div class="ss-right">
+      <div class="ss-codehead">
+        <span>Code</span>
+        <span class="ss-sub">Author scripts as <code>async function run(ctx) { ... }</code> or just the body.</span>
+      </div>
+      <textarea name="code" class="ss-textarea" spellcheck="false" {{#unless current}}disabled{{/unless}}>{{current.code}}</textarea>
+    </div>
+  </section>
+</form>
